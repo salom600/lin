@@ -158,8 +158,9 @@ appstream-qt
 pamac-aur
 
 # ---- Installer (one-click install to disk) ----------------------------------
+# (Calamares branding is shipped via the airootfs overlay at
+#  airootfs/etc/calamares/branding/lin/ — not as a separate package.)
 calamares
-calamares-branding-lin
 dosfstools
 mtools
 gparted

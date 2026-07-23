@@ -381,4 +381,16 @@ journalctl --vacuum-size=1K 2>/dev/null || true
 rm -rf /var/log/journal/* 2>/dev/null || true
 rm -rf /tmp/* 2>/dev/null || true
 
+# ============================================================================
+# 17. Strip the [lin-local] section from /etc/pacman.conf
+# ============================================================================
+# [lin-local] pointed at file:///repo/$arch — that path only exists in the
+# build container. The live ISO doesn't have it, so every `pacman -Sy` on the
+# live ISO would print a warning. Remove the section entirely.
+echo "==> [lin] stripping [lin-local] from /etc/pacman.conf"
+if [ -f /etc/pacman.conf ]; then
+    # Delete from the [lin-local] header to the next blank line, inclusive.
+    sed -i '/^\[lin-local\]/,/^$/d' /etc/pacman.conf
+fi
+
 echo "==> [lin] customize_airootfs.sh done"

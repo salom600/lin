@@ -77,9 +77,10 @@ jobs:
           pacman -Syu --noconfirm
 
           echo "==> Installing build dependencies"
+          # NOTE: makepkg is NOT a separate package — it ships with pacman.
+          # base-devel is a package group (provides gcc, fakeroot, etc. for makepkg).
           pacman -S --noconfirm --needed \
             archiso \
-            makepkg \
             git \
             wget \
             curl \
@@ -88,7 +89,6 @@ jobs:
             imagemagick \
             librsvg \
             qt5-svg \
-            inkscape \
             python \
             python-pillow \
             pyalpm \
@@ -145,27 +145,35 @@ jobs:
             bash scripts/build-lin-packages.sh
 
       # ----------------------------------------------------------------------
-      # 6. Add chaotic-aur keyring (so bauh / pamac-aur can install)
+      # 6. Add chaotic-aur repo + keyring (needed for bauh / pamac-aur)
+      #    Order matters: get key first, then keyring pkg, then mirrorlist,
+      #    then enable the repo in pacman.conf, then refresh db.
       # ----------------------------------------------------------------------
       - name: Add chaotic-aur repository
         run: |
-          echo "==> Adding chaotic-aur repo + keyring"
-          pacman -S --noconfirm --needed chaotic-keyring || true
-          pacman-key --recv-key 3056513887B78AEB --keyserver keyserver.ubuntu.com || true
-          pacman-key --lsign-key 3056513887B78AEB || true
+          set -e
+          echo "==> Fetching chaotic-aur signing key"
+          # Try multiple keyservers in case one is flaky
+          for ks in keyserver.ubuntu.com keys.openpgp.org pgp.mit.edu; do
+            if pacman-key --recv-key 3056513887B78AEB --keyserver "${ks}"; then
+              break
+            fi
+          done
+          pacman-key --lsign-key 3056513887B78AEB
 
-          # Add chaotic-aur to pacman.conf (after multilib)
+          echo "==> Installing chaotic keyring + mirrorlist packages (from CDN)"
+          # These two .pkg.tar.zst files are hosted on chaotic-aur's CDN and can
+          # be installed with `pacman -U <url>` without needing the repo enabled.
+          pacman -U --noconfirm \
+            'https://cdn-mirror.chaotic.cx/chaotic-aur/chaotic-keyring.pkg.tar.zst' \
+            'https://cdn-mirror.chaotic.cx/chaotic-aur/chaotic-mirrorlist.pkg.tar.zst'
+
+          echo "==> Enabling [chaotic-aur] in /etc/pacman.conf"
+          # Append the repo section to the container's pacman.conf
           cat >> /etc/pacman.conf <<'EOF'
 
           [chaotic-aur]
           Include = /etc/pacman.d/chaotic-mirrorlist
-          EOF
-
-          # Drop the chaotic mirrorlist into place
-          mkdir -p /etc/pacman.d
-          cat > /etc/pacman.d/chaotic-mirrorlist <<'EOF'
-          Server = https://cdn-mirror.chaotic.cx/$repo/$arch
-          Server = https://mirror.f4st.host/chaotic-aur/$repo/$arch
           EOF
 
           # Add the local lin-local repo (built in step 5)
@@ -176,6 +184,7 @@ jobs:
           SigLevel = Optional TrustAll
           EOF
 
+          echo "==> Refreshing pacman databases"
           pacman -Sy
 
       # ----------------------------------------------------------------------

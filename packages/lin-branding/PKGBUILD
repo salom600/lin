@@ -18,7 +18,7 @@ arch=('any')
 url="https://github.com/salom600/lin"
 license=('GPL3')
 depends=('gtk3' 'gtk4' 'sddm' 'papirus-icon-theme')
-makedepends=('imagemagick' 'inkscape' 'rsvg-convert' 'qt5-svg')
+makedepends=('imagemagick' 'librsvg' 'qt5-svg')
 source=()
 sha256sums=()
 
