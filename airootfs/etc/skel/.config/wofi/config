@@ -1,0 +1,28 @@
+# ==========================================================================
+# Lin OS — wofi (application launcher, Win11 Start menu equivalent)
+# ==========================================================================
+# Opened with Super+D or by clicking the ❖ logo on the waybar.
+# Styled in style.css to look like the Windows 11 Start menu.
+# ==========================================================================
+
+show=drun
+prompt=Search apps...
+filter_rate=50
+allow_markup=true
+no_actions=true
+halign=fill
+orientation=vertical
+content_halign=fill
+hide_scroll=true
+matching=fuzzy
+insensitive=true
+width=480
+lines=8
+cache_file=/dev/null
+term=kitty
+print_command_only=false
+show_all=true
+sort_order=alphabetical
+normal_window=true
+key_expand=Tab
+key_exit=Escape

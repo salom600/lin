@@ -1,0 +1,31 @@
+# Lin OS build artifacts
+work/
+out/
+output/
+*.iso
+*.squashfs
+*.pkg.tar.zst
+*.sig
+*.log
+
+# Local packages built by makepkg
+packages/*/src/
+packages/*/pkg/
+packages/*/*.pkg.tar.zst
+packages/*/*.src.tar.gz
+
+# Editor / OS junk
+.DS_Store
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.*.un~
+
+# Token / secrets — NEVER commit these
+.env
+.env.local
+*.token
+*.key
+secrets/

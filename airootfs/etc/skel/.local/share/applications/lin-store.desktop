@@ -1,0 +1,13 @@
+[Desktop Entry]
+Type=Application
+Name=Lin Store
+GenericName=App Store
+Comment=Install, update, and remove applications (pacman, AUR, Flatpak, AppImage)
+Comment[ar]=تثبيت وتحديث وحذف التطبيقات
+Exec=lin-store
+Icon=lin-store
+Terminal=false
+Categories=System;PackageManager;Settings;
+Keywords=store;install;update;remove;apps;software;appstore;
+StartupNotify=true
+StartupWMClass=bauh

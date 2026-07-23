@@ -1,0 +1,11 @@
+[Desktop Entry]
+Type=Application
+Name=Welcome to Lin OS
+GenericName=Welcome
+Comment=Get started with Lin OS — tips, shortcuts, and quick setup
+Exec=lin-welcome
+Icon=lin-welcome
+Terminal=false
+Categories=System;Utility;Settings;
+Keywords=welcome;help;getting started;setup;
+StartupNotify=true

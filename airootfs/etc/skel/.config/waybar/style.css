@@ -1,0 +1,219 @@
+/* =========================================================================
+   Lin OS — waybar style
+   =========================================================================
+   - Translucent dark background with blur (the "transparent" requirement)
+   - Centered clock = Windows 11-like
+   - Rounded modules, soft shadows
+   - Color palette: blue/purple accent (matches Hyprland border colors)
+   ========================================================================= */
+
+* {
+    /* Fonts */
+    font-family: "Inter", "Fira Sans", "Roboto", "Cantarell", sans-serif;
+    font-size: 13px;
+    font-weight: 500;
+
+    /* No default border */
+    border: none;
+    border-radius: 0;
+
+    /* Color palette (CSS variables) */
+    --bg:          rgba(20, 22, 30, 0.65);   /* translucent dark */
+    --bg-hover:    rgba(40, 44, 60, 0.85);
+    --fg:          #e6e9ef;
+    --fg-muted:    #9ca3af;
+    --accent:      #6366f1;                  /* indigo-500 */
+    --accent-2:    #8b5cf6;                  /* violet-500 */
+    --success:     #10b981;
+    --warning:     #f59e0b;
+    --critical:    #ef4444;
+    --border:      rgba(255, 255, 255, 0.08);
+}
+
+/* ---- The bar itself ----------------------------------------------------- */
+window#waybar {
+    background-color: var(--bg);
+    color: var(--fg);
+    /* Windows 11 uses no border, just a subtle shadow under the bar */
+    border-top: 1px solid var(--border);
+    /* The blur is done by Hyprland's blur shader, not by waybar itself.
+       But we can stack a subtle gradient here for depth. */
+    transition-property: background-color;
+    transition-duration: 0.3s;
+}
+
+/* ---- Generic module padding --------------------------------------------- */
+.modules-left,
+.modules-center,
+.modules-right {
+    padding: 0 6px;
+}
+
+#workspaces button,
+#clock,
+#pulseaudio,
+#backlight,
+#bluetooth,
+#network,
+#battery,
+#tray,
+#custom-launcher,
+#custom-power,
+#custom-updates,
+#window {
+    padding: 0 12px;
+    margin: 6px 2px;
+    border-radius: 8px;
+    background-color: transparent;
+    color: var(--fg);
+    transition: all 0.2s ease;
+}
+
+/* ---- Hover state -------------------------------------------------------- */
+#workspaces button:hover,
+#clock:hover,
+#pulseaudio:hover,
+#backlight:hover,
+#bluetooth:hover,
+#network:hover,
+#battery:hover,
+#custom-launcher:hover,
+#custom-power:hover,
+#custom-updates:hover,
+#window:hover {
+    background-color: var(--bg-hover);
+}
+
+/* ---- "Start" launcher button ------------------------------------------- */
+#custom-launcher {
+    background-color: var(--accent);
+    color: #ffffff;
+    font-size: 16px;
+    font-weight: 700;
+    padding: 0 14px;
+    margin-left: 6px;
+    border-radius: 8px;
+    box-shadow: 0 2px 6px rgba(99, 102, 241, 0.4);
+}
+#custom-launcher:hover {
+    background-color: var(--accent-2);
+    box-shadow: 0 4px 10px rgba(139, 92, 246, 0.5);
+}
+
+/* ---- Workspaces (numbered dots, Windows 11-like) ----------------------- */
+#workspaces {
+    margin: 0;
+    padding: 0;
+}
+#workspaces button {
+    padding: 0 8px;
+    border-radius: 6px;
+    color: var(--fg-muted);
+    font-weight: 600;
+}
+#workspaces button.active {
+    color: #ffffff;
+    background-color: var(--accent);
+    box-shadow: 0 2px 6px rgba(99, 102, 241, 0.4);
+}
+#workspaces button.urgent {
+    color: var(--critical);
+    background-color: rgba(239, 68, 68, 0.15);
+}
+#workspaces button:hover {
+    background-color: var(--bg-hover);
+}
+
+/* ---- Clock (centered, slightly larger) --------------------------------- */
+#clock {
+    font-size: 14px;
+    font-weight: 700;
+    color: #ffffff;
+    background-color: rgba(99, 102, 241, 0.15);
+    border: 1px solid rgba(99, 102, 241, 0.25);
+    padding: 0 18px;
+}
+
+/* ---- Window title ------------------------------------------------------ */
+#window {
+    color: var(--fg-muted);
+    font-style: italic;
+    font-weight: 400;
+}
+
+/* ---- Audio ------------------------------------------------------------- */
+#pulseaudio {
+    color: var(--fg);
+}
+#pulseaudio.muted {
+    color: var(--critical);
+}
+
+/* ---- Backlight --------------------------------------------------------- */
+#backlight {
+    color: var(--fg);
+}
+
+/* ---- Bluetooth --------------------------------------------------------- */
+#bluetooth.connected {
+    color: var(--accent);
+}
+
+/* ---- Network ----------------------------------------------------------- */
+#network {
+    color: var(--fg);
+}
+#network.disconnected {
+    color: var(--critical);
+}
+
+/* ---- Battery ----------------------------------------------------------- */
+#battery {
+    color: var(--fg);
+}
+#battery.charging,
+#battery.plugged {
+    color: var(--success);
+}
+#battery.good {
+    color: var(--success);
+}
+#battery.warning {
+    color: var(--warning);
+}
+#battery.critical {
+    color: var(--critical);
+    animation: pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes pulse {
+    0%, 100% { opacity: 1.0; }
+    50%      { opacity: 0.5; }
+}
+
+/* ---- Updates ----------------------------------------------------------- */
+#custom-updates {
+    color: var(--warning);
+}
+
+/* ---- System tray ------------------------------------------------------- */
+#tray {
+    padding: 0 8px;
+}
+#tray > .passive {
+    -gtk-icon-effect: dim;
+}
+#tray > .needs-attention {
+    -gtk-icon-effect: highlight;
+    background-color: var(--critical);
+}
+
+/* ---- Power button ------------------------------------------------------ */
+#custom-power {
+    color: var(--fg);
+    font-size: 16px;
+}
+#custom-power:hover {
+    color: var(--critical);
+    background-color: rgba(239, 68, 68, 0.15);
+}

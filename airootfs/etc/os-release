@@ -1,0 +1,13 @@
+NAME="Lin OS"
+ID=lin
+ID_LIKE=arch
+PRETTY_NAME="Lin OS — Lightweight, sleek, user-friendly"
+VERSION="2026.07"
+VERSION_ID=2026.07
+VERSION_CODENAME=aurora
+ANSI_COLOR="0;36"
+HOME_URL="https://github.com/salom600/lin"
+DOCUMENTATION_URL="https://github.com/salom600/lin/tree/main/docs"
+SUPPORT_URL="https://github.com/salom600/lin/issues"
+BUG_REPORT_URL="https://github.com/salom600/lin/issues"
+LOGO=lin

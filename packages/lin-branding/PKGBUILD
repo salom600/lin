@@ -1,0 +1,398 @@
+# Maintainer: Lin OS Project <https://github.com/salom600/lin>
+# -----------------------------------------------------------------------------
+# lin-branding
+# -------------
+# Provides the Lin OS visual identity:
+#   - Default wallpaper (/usr/share/backgrounds/lin/*.png)
+#   - GTK theme "Lin-Dark" (/usr/share/themes/Lin-Dark/)
+#   - SDDM theme "lin"    (/usr/share/sddm/themes/lin/)
+#   - GRUB background     (/usr/share/backgrounds/lin/lin-grub.png)
+#   - Icons / logo        (/usr/share/icons/hicolor/scalable/apps/lin-*.svg)
+# -----------------------------------------------------------------------------
+
+pkgname=lin-branding
+pkgver=2026.07
+pkgrel=1
+pkgdesc="Lin OS visual branding — wallpaper, GTK theme, SDDM theme, icons"
+arch=('any')
+url="https://github.com/salom600/lin"
+license=('GPL3')
+depends=('gtk3' 'gtk4' 'sddm' 'papirus-icon-theme')
+makedepends=('imagemagick' 'inkscape' 'rsvg-convert' 'qt5-svg')
+source=()
+sha256sums=()
+
+package() {
+    # ---- Wallpapers ---------------------------------------------------------
+    install -d "${pkgdir}/usr/share/backgrounds/lin"
+    # Generate a 1920x1080 gradient wallpaper using ImageMagick at build time
+    # (no external assets needed — the wallpaper is generated procedurally)
+    convert -size 1920x1080 \
+        gradient:'#1a1d29'-'#6366f1' \
+        -gravity center \
+        -font DejaVu-Sans -pointsize 84 -fill 'rgba(255,255,255,0.85)' \
+        -annotate +0-50 'Lin OS' \
+        -font DejaVu-Sans -pointsize 28 -fill 'rgba(255,255,255,0.55)' \
+        -annotate +0+50 'aurora' \
+        "${pkgdir}/usr/share/backgrounds/lin/lin-default.png"
+
+    # Generate the aurora variant (more purple, with a wave)
+    convert -size 1920x1080 \
+        gradient:'#2d1b3d'-'#8b5cf6' \
+        -gravity center \
+        -font DejaVu-Sans -pointsize 84 -fill 'rgba(255,255,255,0.85)' \
+        -annotate +0-50 'Lin OS' \
+        -font DejaVu-Sans -pointsize 28 -fill 'rgba(255,255,255,0.55)' \
+        -annotate +0+50 'aurora' \
+        "${pkgdir}/usr/share/backgrounds/lin/lin-aurora.png"
+
+    # GRUB background (smaller, darker)
+    convert -size 640x480 gradient:'#1a1d29'-'#2d1b3d' \
+        "${pkgdir}/usr/share/backgrounds/lin/lin-grub.png"
+
+    # ---- GTK theme "Lin-Dark" ----------------------------------------------
+    install -d "${pkgdir}/usr/share/themes/Lin-Dark/gtk-3.0"
+    install -d "${pkgdir}/usr/share/themes/Lin-Dark/gtk-4.0"
+    install -d "${pkgdir}/usr/share/themes/Lin-Dark/xfwm4"
+
+    # GTK 3 CSS
+    cat > "${pkgdir}/usr/share/themes/Lin-Dark/gtk-3.0/gtk.css" <<'GTK3'
+@define-color theme_bg_color #1a1d29;
+@define-color theme_fg_color #e6e9ef;
+@define-color theme_selected_bg_color #6366f1;
+@define-color theme_selected_fg_color #ffffff;
+@define-color theme_unfocused_bg_color #1a1d29;
+@define-color theme_unfocused_fg_color #9ca3af;
+
+* {
+    -GtkWindow-resize-grip-height: 0;
+    -GtkWindow-resize-grip-width: 0;
+    -GtkWidget-text-handle-width: 24;
+    -GtkWidget-text-handle-height: 24;
+    outline: none;
+}
+
+window, .background {
+    background-color: @theme_bg_color;
+    color: @theme_fg_color;
+}
+
+button {
+    padding: 6px 12px;
+    border-radius: 8px;
+    border: 1px solid rgba(255,255,255,0.08);
+    background-color: rgba(255,255,255,0.04);
+    color: @theme_fg_color;
+    transition: all 0.15s ease;
+}
+button:hover { background-color: rgba(99,102,241,0.2); }
+button:active, button:checked { background-color: @theme_selected_bg_color; color: white; }
+
+entry {
+    padding: 6px 10px;
+    border-radius: 8px;
+    border: 1px solid rgba(255,255,255,0.1);
+    background-color: rgba(0,0,0,0.2);
+    color: @theme_fg_color;
+}
+entry:focus { border-color: @theme_selected_bg_color; }
+
+headerbar, .titlebar {
+    background-color: rgba(26,29,41,0.95);
+    color: @theme_fg_color;
+    border-bottom: 1px solid rgba(255,255,255,0.05);
+    padding: 6px 10px;
+}
+
+treeview.view, list, scrolledwindow viewport {
+    background-color: @theme_bg_color;
+    color: @theme_fg_color;
+}
+treeview.view:selected, list row:selected {
+    background-color: @theme_selected_bg_color;
+    color: white;
+}
+
+menu, .menu, popover, popover.background {
+    background-color: rgba(26,29,41,0.98);
+    color: @theme_fg_color;
+    border-radius: 10px;
+    border: 1px solid rgba(255,255,255,0.06);
+    box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+}
+
+menuitem, .menuitem {
+    padding: 8px 14px;
+    border-radius: 6px;
+}
+menuitem:hover, .menuitem:hover {
+    background-color: @theme_selected_bg_color;
+    color: white;
+}
+
+notebook tab {
+    padding: 6px 14px;
+    border-radius: 6px 6px 0 0;
+}
+notebook tab:checked { background-color: @theme_selected_bg_color; color: white; }
+GTK3
+
+    # GTK 4 CSS (similar but using gtk4 syntax)
+    cp "${pkgdir}/usr/share/themes/Lin-Dark/gtk-3.0/gtk.css" \
+       "${pkgdir}/usr/share/themes/Lin-Dark/gtk-4.0/gtk.css"
+
+    # Index file
+    cat > "${pkgdir}/usr/share/themes/Lin-Dark/index.theme" <<'IDX'
+[Desktop Entry]
+Type=X-GNOME-Metatheme
+Name=Lin-Dark
+Comment=Lin OS dark theme (Windows 11-inspired)
+Encoding=UTF-8
+
+[X-GNOME-Metatheme]
+GtkTheme=Lin-Dark
+MetacityTheme=Lin-Dark
+IconTheme=Papirus-Dark
+CursorTheme=breeze_cursors
+ButtonLayout=appmenu:minimize,maximize,close
+IDX
+
+    # ---- SDDM theme "lin" --------------------------------------------------
+    install -d "${pkgdir}/usr/share/sddm/themes/lin"
+
+    # theme.conf
+    cat > "${pkgdir}/usr/share/sddm/themes/lin/theme.conf" <<'SDMMC'
+[General]
+type=wayland
+background=/usr/share/backgrounds/lin/lin-default.png
+
+[Inputs]
+# Show "Other" user field
+HideUsers=false
+HideShells=false
+
+[Theme]
+Logo=/usr/share/icons/hicolor/scalable/apps/lin-logo.svg
+Background=/usr/share/backgrounds/lin/lin-default.png
+
+# QtQuick 2 rendering
+QtQuickComposite=true
+SDMMC
+
+    # main.qml (QtQuick 2 SDDM theme)
+    cat > "${pkgdir}/usr/share/sddm/themes/lin/main.qml" <<'QML'
+import QtQuick 2.15
+import QtQuick.Layouts 1.15
+import SddmComponents 2.0
+
+Rectangle {
+    width: 640
+    height: 480
+    color: "transparent"
+
+    Image {
+        anchors.fill: parent
+        source: config.Background
+        fillMode: Image.PreserveAspectCrop
+    }
+
+    Rectangle {
+        anchors.fill: parent
+        color: "#1a1d29"
+        opacity: 0.6
+    }
+
+    ColumnLayout {
+        anchors.centerIn: parent
+        spacing: 18
+
+        Text {
+            text: "Lin OS"
+            color: "#ffffff"
+            font.family: "Inter"
+            font.pixelSize: 56
+            font.weight: Font.DemiBold
+            Layout.alignment: Qt.AlignHCenter
+        }
+        Text {
+            text: "aurora"
+            color: "#a0a3b1"
+            font.family: "Inter"
+            font.pixelSize: 18
+            Layout.alignment: Qt.AlignHCenter
+        }
+
+        TextField {
+            id: username
+            placeholderText: "Username"
+            color: "#ffffff"
+            font.pixelSize: 16
+            font.family: "Inter"
+            width: 280
+            Layout.alignment: Qt.AlignHCenter
+            background: Rectangle { color: "#2d3142"; radius: 8; border.color: "#3f3d56"; border.width: 1 }
+            onAccepted: password.forceActiveFocus()
+        }
+        TextField {
+            id: password
+            placeholderText: "Password"
+            echoMode: TextInput.Password
+            color: "#ffffff"
+            font.pixelSize: 16
+            font.family: "Inter"
+            width: 280
+            Layout.alignment: Qt.AlignHCenter
+            background: Rectangle { color: "#2d3142"; radius: 8; border.color: "#3f3d56"; border.width: 1 }
+            onAccepted: sddm.login(username.text, password.text)
+        }
+        Button {
+            text: "Sign in"
+            Layout.alignment: Qt.AlignHCenter
+            Layout.preferredWidth: 280
+            Layout.preferredHeight: 40
+            onClicked: sddm.login(username.text, password.text)
+            contentItem: Text {
+                text: parent.text
+                color: "#ffffff"
+                font.family: "Inter"
+                font.pixelSize: 16
+                font.weight: Font.DemiBold
+                horizontalAlignment: Text.AlignHCenter
+                verticalAlignment: Text.AlignVCenter
+            }
+            background: Rectangle { color: "#6366f1"; radius: 8 }
+        }
+    }
+
+    Text {
+        anchors.bottom: parent.bottom
+        anchors.bottomMargin: 20
+        anchors.horizontalCenter: parent.horizontalCenter
+        text: "Welcome back"
+        color: "#6b7280"
+        font.family: "Inter"
+        font.pixelSize: 14
+    }
+}
+QML
+
+    # metadata file
+    cat > "${pkgdir}/usr/share/sddm/themes/lin/metadata.desktop" <<'META'
+[SddmGreeterTheme]
+Name=Lin
+Description=Lin OS SDDM theme — sleek, dark, Windows 11-inspired
+Author=Lin OS Project
+Copyright=2026, Lin OS Project
+License=GPL-3.0
+Type=sddm-theme
+Version=1.0
+Website=https://github.com/salom600/lin
+Screenshot=preview.png
+META
+
+    # ---- Logo icons --------------------------------------------------------
+    install -d "${pkgdir}/usr/share/icons/hicolor/scalable/apps"
+
+    # Lin OS logo (simple SVG diamond)
+    cat > "${pkgdir}/usr/share/icons/hicolor/scalable/apps/lin-logo.svg" <<'SVG'
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128">
+  <defs>
+    <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#6366f1"/>
+      <stop offset="100%" stop-color="#8b5cf6"/>
+    </linearGradient>
+  </defs>
+  <rect width="128" height="128" rx="28" fill="url(#g)"/>
+  <path d="M 40 32 L 88 32 L 88 44 L 52 44 L 52 84 L 88 84 L 88 96 L 40 96 Z"
+        fill="white" opacity="0.95"/>
+</svg>
+SVG
+
+    # Store icon (shopping bag with "L")
+    cat > "${pkgdir}/usr/share/icons/hicolor/scalable/apps/lin-store.svg" <<'SVG'
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128">
+  <defs>
+    <linearGradient id="g2" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#6366f1"/>
+      <stop offset="100%" stop-color="#4f46e5"/>
+    </linearGradient>
+  </defs>
+  <rect width="128" height="128" rx="28" fill="url(#g2)"/>
+  <path d="M 32 44 L 96 44 L 92 100 L 36 100 Z" fill="white" opacity="0.95"/>
+  <path d="M 48 44 Q 48 28 64 28 Q 80 28 80 44" stroke="white" stroke-width="6" fill="none"/>
+  <text x="64" y="80" font-family="Inter, sans-serif" font-size="38" font-weight="bold"
+        fill="#4f46e5" text-anchor="middle">L</text>
+</svg>
+SVG
+
+    # Installer icon (download arrow)
+    cat > "${pkgdir}/usr/share/icons/hicolor/scalable/apps/lin-installer.svg" <<'SVG'
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128">
+  <defs>
+    <linearGradient id="g3" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#10b981"/>
+      <stop offset="100%" stop-color="#059669"/>
+    </linearGradient>
+  </defs>
+  <rect width="128" height="128" rx="28" fill="url(#g3)"/>
+  <path d="M 64 28 L 64 80 M 44 60 L 64 80 L 84 60" stroke="white" stroke-width="8" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+  <rect x="36" y="92" width="56" height="8" rx="4" fill="white"/>
+</svg>
+SVG
+
+    # Welcome icon (wave hand)
+    cat > "${pkgdir}/usr/share/icons/hicolor/scalable/apps/lin-welcome.svg" <<'SVG'
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128">
+  <defs>
+    <linearGradient id="g4" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#f59e0b"/>
+      <stop offset="100%" stop-color="#d97706"/>
+    </linearGradient>
+  </defs>
+  <rect width="128" height="128" rx="28" fill="url(#g4)"/>
+  <text x="64" y="86" font-family="Inter, sans-serif" font-size="80" font-weight="bold"
+        fill="white" text-anchor="middle">L</text>
+</svg>
+SVG
+
+    # Update icon
+    cat > "${pkgdir}/usr/share/icons/hicolor/scalable/apps/lin-update.svg" <<'SVG'
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128">
+  <defs>
+    <linearGradient id="g5" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#3b82f6"/>
+      <stop offset="100%" stop-color="#2563eb"/>
+    </linearGradient>
+  </defs>
+  <rect width="128" height="128" rx="28" fill="url(#g5)"/>
+  <path d="M 64 30 a 34 34 0 1 1 -24 10 M 64 28 L 64 50 M 50 42 L 64 50 L 78 42"
+        stroke="white" stroke-width="8" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>
+SVG
+
+    # ---- Mimetypes / pixmaps for .desktop files ---------------------------
+    for icon in lin-store lin-installer lin-welcome lin-update; do
+        # Generate PNG versions in multiple sizes
+        for size in 16 22 32 48 64 128 256; do
+            install -d "${pkgdir}/usr/share/icons/hicolor/${size}x${size}/apps"
+            rsvg-convert -w $size -h $size \
+                "${pkgdir}/usr/share/icons/hicolor/scalable/apps/${icon}.svg" \
+                "${pkgdir}/usr/share/icons/hicolor/${size}x${size}/apps/${icon}.png" 2>/dev/null || \
+            convert -background none -resize ${size}x${size} \
+                "${pkgdir}/usr/share/icons/hicolor/scalable/apps/${icon}.svg" \
+                "${pkgdir}/usr/share/icons/hicolor/${size}x${size}/apps/${icon}.png" 2>/dev/null || true
+        done
+    done
+
+    # ---- LICENSE -----------------------------------------------------------
+    install -Dm644 /dev/stdin "${pkgdir}/usr/share/licenses/${pkgname}/LICENSE" <<'LIC'
+Lin OS branding is licensed under GPL-3.0-or-later.
+The generated artwork (wallpapers, icons, themes) is licensed under
+CC-BY-4.0 for the Lin OS project.
+LIC
+}

@@ -1,0 +1,65 @@
+# Lin OS — bauh (app store) defaults
+# bauh is the unified app store that handles pacman + AUR + Flatpak + AppImage.
+# This config is dropped into /etc/skel/.config/bauh/ so every new user gets it.
+
+[app]
+# Show all installed apps by default (not just bauh-installed)
+filter_installed = true
+
+[gui]
+# Modern dark theme
+theme = dark
+# Show tray icon
+tray = true
+# Start hidden in tray
+start_with_tray = false
+# Confirm before uninstalling
+confirm_uninstall = true
+# Confirm before downgrading
+confirm_downgrade = true
+# Number of apps per page
+screen_size = 60
+
+[download]
+# Max concurrent downloads (low to keep system responsive)
+max_concurrent = 2
+# Use European mirrors by default
+icons_endpoint = "https://icons.bauh.ai"
+
+[memory]
+# Free memory after each transaction
+free_disk = true
+
+[backup]
+enabled = true
+dir = ~/.local/share/bauh/backup
+limit = 5
+
+[aur]
+# Require building from source for AUR (not prebuilt) — safer
+build = true
+# Don't build in tmpfs (saves RAM during builds)
+tmpfs = false
+# Skip review of PKGBUILD (faster, slightly less safe)
+review = false
+# Auto-resolve deps
+deps_check = true
+# Number of threads for makepkg
+makepkg_threads = 4
+
+[flatpak]
+enabled = true
+# Default level for new flatpaks (system = installs for everyone)
+installation_level = user
+# Auto-fetch icons
+icons = true
+# Pre-install flathub
+flathub = true
+
+[pacman]
+# Color output
+color = true
+# Don't ask "are you sure?"
+noconfirm = true
+# Install optional deps automatically
+optional_deps = ask

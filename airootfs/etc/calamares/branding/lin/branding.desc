@@ -1,0 +1,57 @@
+# =============================================================================
+# Lin OS — Calamares branding
+# =============================================================================
+# This file describes the visual look of the Calamares installer window:
+#   - Product name, logo, URL
+#   - Slideshow shown during the install
+#   - Style of the welcome/finished panels
+#
+# All images live next to this file in the same directory.
+# =============================================================================
+
+componentName: lin
+
+# ---- Brand strings ---------------------------------------------------------
+strings:
+    productName:         "Lin OS"
+    shortProductName:    "Lin OS"
+    version:             "2026.07"
+    shortVersion:        "2026.07"
+    codename:            "aurora"
+    productUrl:          "https://github.com/salom600/lin"
+    supportUrl:          "https://github.com/salom600/lin/issues"
+    knownIssuesUrl:      "https://github.com/salom600/lin/issues"
+    releaseNotesUrl:     "https://github.com/salom600/lin/releases"
+    donateUrl:           ""
+
+# ---- Images ---------------------------------------------------------------
+images:
+    productLogo:        "logo.png"           # shown on welcome screen
+    productText:        "logo-text.png"      # text version of logo
+    productWelcome:     "welcome.png"        # large hero image on welcome
+
+# ---- Slideshow (shown during install) -------------------------------------
+slideshow:               "show.qml"
+slideshowAPI:            1
+
+# ---- Style (color palette of the installer window) -----------------------
+style:
+    SidebarBackground:    "#1a1d29"
+    SidebarText:          "#e6e9ef"
+    SidebarTextHover:     "#ffffff"
+    SidebarTextSelect:    "#ffffff"
+    SidebarBackgroundColor: "#1a1d29"
+    SidebarFont:          "Inter"
+    SidebarFontSize:      "12"
+
+    # Side panel accent
+    SidebarBackgroundCurrent: "#6366f1"
+    SidebarBackgroundActive:  "#3f3d56"
+
+    # Main panel
+    WindowBackground:     "#ffffff"
+    WindowBackgroundDark: "#f3f4f6"
+    WindowText:           "#1a1d29"
+    WindowTextDim:        "#6b7280"
+    WindowFont:           "Inter"
+    WindowFontSize:       "11"

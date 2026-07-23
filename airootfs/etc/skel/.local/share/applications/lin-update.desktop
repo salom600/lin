@@ -1,0 +1,11 @@
+[Desktop Entry]
+Type=Application
+Name=Lin OS Update
+GenericName=System Updater
+Comment=Update all your software in one click (pacman + AUR + Flatpak)
+Exec=lin-update
+Icon=lin-update
+Terminal=true
+Categories=System;Utility;
+Keywords=update;upgrade;pacman;aur;flatpak;
+StartupNotify=true

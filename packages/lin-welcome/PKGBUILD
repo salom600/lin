@@ -1,0 +1,168 @@
+# Maintainer: Lin OS Project <https://github.com/salom600/lin>
+# -----------------------------------------------------------------------------
+# lin-welcome
+# ------------
+# Provides the Lin OS welcome / first-launch experience:
+#   - /usr/local/bin/lin-welcome  (graphical welcome window)
+#   - /usr/local/bin/lin-store    (app store launcher)
+#   - /usr/local/bin/lin-update   (one-command system updater)
+#   - systemd units: lin-firstboot.service, lin-welcome.service
+# -----------------------------------------------------------------------------
+
+pkgname=lin-welcome
+pkgver=2026.07
+pkgrel=1
+pkgdesc="Lin OS welcome window, store launcher, and update helper"
+arch=('any')
+url="https://github.com/salom600/lin"
+license=('GPL3')
+depends=('bash' 'kitty' 'pacman' 'systemd')
+optdepends=('bauh: app store (primary)'
+            'pamac-aur: app store (fallback)'
+            'flatpak: Flatpak support')
+source=()
+sha256sums=()
+
+package() {
+    install -d "${pkgdir}/usr/local/bin"
+    install -d "${pkgdir}/etc/systemd/system"
+    install -d "${pkgdir}/etc/lin"
+
+    # Welcome launcher
+    cat > "${pkgdir}/usr/local/bin/lin-welcome" <<'EOF'
+#!/usr/bin/env bash
+# Lin OS welcome window — runs in a kitty window on first Hyprland login.
+set -e
+export LANG="${LANG:-en_US.UTF-8}"
+
+# Pause to let Hyprland settle
+sleep 2
+
+kitty --title "Welcome to Lin OS" --class lin-welcome bash -c '
+echo -e "\e[36m╔══════════════════════════════════════════════╗\e[0m"
+echo -e "\e[36m║        Welcome to Lin OS 2026.07             ║\e[0m"
+echo -e "\e[36m║       \"aurora\" — Lightweight & sleek         ║\e[0m"
+echo -e "\e[36m╚══════════════════════════════════════════════╝\e[0m"
+echo
+echo "Your system is ready. A few things you can do:"
+echo
+echo "  \e[1m1.\e[0m Open the app store:        click the \e[1mLin Store\e[0m icon on the dock"
+echo "  \e[1m2.\e[0m Install more apps:         Settings → Software Sources → Flathub"
+echo "  \e[1m3.\e[0m Take a screenshot:         PrintScreen"
+echo "  \e[1m4.\e[0m Open app launcher:         Super (Windows) key"
+echo "  \e[1m5.\e[0m Open terminal:             Super + Enter"
+echo "  \e[1m6.\e[0m Close window:              Super + Q"
+echo
+echo "Press \e[1mEnter\e[0m to dismiss this window."
+read -r
+'
+EOF
+    chmod 0755 "${pkgdir}/usr/local/bin/lin-welcome"
+
+    # Store launcher
+    cat > "${pkgdir}/usr/local/bin/lin-store" <<'EOF'
+#!/usr/bin/env bash
+# Launches the Lin OS app store (bauh by default, pamac fallback).
+if command -v bauh >/dev/null 2>&1; then
+    exec bauh "$@"
+elif command -v pamac-manager >/dev/null 2>&1; then
+    exec pamac-manager "$@"
+else
+    notify-send -u critical "Lin OS" "App store not installed. Run: sudo /etc/lin/install-store.sh"
+    exit 1
+fi
+EOF
+    chmod 0755 "${pkgdir}/usr/local/bin/lin-store"
+
+    # Update helper
+    cat > "${pkgdir}/usr/local/bin/lin-update" <<'EOF'
+#!/usr/bin/env bash
+set -e
+echo "==> Updating pacman packages..."
+sudo pacman -Syu
+if command -v flatpak >/dev/null 2>&1; then
+    echo "==> Updating Flatpak apps..."
+    flatpak update -y || true
+fi
+if command -v bauh >/dev/null 2>&1; then
+    echo "==> Updating AUR + AppImage packages (bauh)..."
+    bauh --update || true
+fi
+echo "==> Done."
+EOF
+    chmod 0755 "${pkgdir}/usr/local/bin/lin-update"
+
+    # First-boot script (also shipped here so the installed system has it)
+    cat > "${pkgdir}/etc/lin/firstboot.sh" <<'EOF'
+#!/usr/bin/env bash
+set -euo pipefail
+exec > >(systemd-cat -t lin-firstboot) 2>&1
+echo "firstboot starting"
+
+if command -v reflector >/dev/null; then
+    reflector --country us,gb,de,fr,nl,jp,sg --protocol https --latest 20 --sort rate --save /etc/pacman.d/mirrorlist || true
+fi
+
+pacman-key --init
+pacman-key --populate archlinux
+
+if pacman -Qs chaotic-keyring >/dev/null 2>&1; then
+    pacman-key --recv-key 3056513887B78AEB --keyserver keyserver.ubuntu.com
+    pacman-key --lsign-key 3056513887B78AEB
+fi
+
+systemctl disable lin-firstboot.service
+echo "firstboot done"
+EOF
+    chmod 0755 "${pkgdir}/etc/lin/firstboot.sh"
+
+    cat > "${pkgdir}/etc/lin/install-store.sh" <<'EOF'
+#!/usr/bin/env bash
+set -e
+sudo pacman -Syu --noconfirm --needed bauh pamac-aur flatpak
+flatpak remote-add --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo || true
+echo "Lin OS app store ready."
+EOF
+    chmod 0755 "${pkgdir}/etc/lin/install-store.sh"
+
+    # systemd units
+    cat > "${pkgdir}/etc/systemd/system/lin-firstboot.service" <<'EOF'
+[Unit]
+Description=Lin OS first-boot wizard
+DefaultDependencies=no
+After=local-fs.target
+Before=multi-user.target sddm.service
+ConditionPathExists=!/var/lib/lin/.firstboot-done
+
+[Service]
+Type=oneshot
+ExecStart=/etc/lin/firstboot.sh
+ExecStartPost=/usr/bin/mkdir -p /var/lib/lin
+ExecStartPost=/usr/bin/touch /var/lib/lin/.firstboot-done
+RemainAfterExit=yes
+StandardOutput=journal+console
+StandardError=journal+console
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+    cat > "${pkgdir}/etc/systemd/system/lin-welcome.service" <<'EOF'
+[Unit]
+Description=Lin OS graphical welcome (one-shot)
+After=sddm.service graphical-session.target
+ConditionPathExists=!/var/lib/lin/.welcome-shown
+
+[Service]
+Type=oneshot
+User=lin
+Environment=DISPLAY=:0 WAYLAND_DISPLAY=wayland-1 XDG_RUNTIME_DIR=/run/user/1000
+ExecStartPre=/usr/bin/sleep 10
+ExecStart=/usr/local/bin/lin-welcome
+ExecStartPost=/usr/bin/touch /var/lib/lin/.welcome-shown
+RemainAfterExit=no
+
+[Install]
+WantedBy=graphical.target
+EOF
+}

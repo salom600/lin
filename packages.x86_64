@@ -1,0 +1,236 @@
+# =============================================================================
+# Lin OS — package list (x86_64)
+# =============================================================================
+# Every package listed here is installed into the live ISO's airootfs.
+# The same set is what gets laid onto the user's disk by Calamares' unpackfs
+# module (see airootfs/etc/calamares/modules/unpackfs.conf), so what's on
+# the live ISO IS what's installed — no separate install stage needed.
+#
+# Design constraints:
+#   - Idle RAM ~150 MB with full desktop running
+#   - Modern Wayland stack with native transparency/blur (Hyprland)
+#   - One-click install (Calamares), app store (Bauh), Windows-11-style UX
+#   - Gaming-ready (glibc, mesa, vulkan, steam dependencies via Flatpak)
+# =============================================================================
+
+# ---- Base system ------------------------------------------------------------
+base
+base-devel
+linux
+linux-firmware
+mkinitcpio
+mkinitcpio-archiso
+systemd
+systemd-sysvcompat
+dbus-broker
+filesystem
+fsarchiver
+haveged
+intel-ucode
+amd-ucode
+openssh
+openresolv
+procps-ng
+reflector
+sudo
+vim
+which
+zsh
+
+# ---- Network ----------------------------------------------------------------
+networkmanager
+modemmanager
+network-manager-applet
+iwd
+bluez
+bluez-utils
+usb_modeswitch
+
+# ---- Audio (PipeWire — the modern, low-latency stack) -----------------------
+pipewire
+pipewire-pulse
+pipewire-alsa
+pipewire-jack
+pipewire-audio
+wireplumber
+pavucontrol
+
+# ---- Video / GPU ------------------------------------------------------------
+mesa
+vulkan-radeon
+vulkan-intel
+vulkan-nouveau
+vulkan-swrast
+vulkan-mesa-layers
+lib32-mesa
+lib32-vulkan-radeon
+lib32-vulkan-intel
+lib32-vulkan-mesa-layers
+intel-media-driver
+libva-mesa-driver
+libva-intel-driver
+
+# ---- Hyprland desktop stack -------------------------------------------------
+# Hyprland is a Wayland compositor with built-in blur, rounded corners,
+# animations and transparency — exactly the "modern, sleek, transparent"
+# look the brief asks for, and it idles at ~250-350 MB with the full stack.
+hyprland
+hyprcursor
+hypridle
+hyprlang
+hyprlock
+hyprpaper
+hyprutils
+xdg-desktop-portal-hyprland
+qt5-wayland
+qt6-wayland
+xorg-xwayland
+wayland
+wayland-protocols
+wayland-utils
+wlroots
+polkit-kde-agent
+qt6ct
+qt5ct
+
+# ---- Panel, launcher, notifications -----------------------------------------
+waybar
+wofi
+dunst
+swaybg
+swaylock
+slurp
+grim
+wl-clipboard
+cliphist
+polkit
+
+# ---- File manager, terminal, editor -----------------------------------------
+thunar
+thunar-volman
+thunar-archive-plugin
+file-roller
+kitty
+micro
+gedit
+
+# ---- GTK / Qt theming -------------------------------------------------------
+gtk3
+gtk4
+gtk-engines
+gtk-engine-murrine
+gnome-themes-extra
+qt5-base
+qt6-base
+kvantum
+kvantum-vertex
+
+# ---- Icon themes (Windows 11-like) ------------------------------------------
+papirus-icon-theme
+adwaita-icon-themes
+hicolor-icon-theme
+
+# ---- Fonts ------------------------------------------------------------------
+ttf-dejavu
+ttf-liberation
+noto-fonts
+noto-fonts-cjk
+noto-fonts-emoji
+noto-fonts-compat
+ttf-roboto
+ttf-roboto-mono
+ttf-fira-sans
+ttf-fira-mono
+ttf-jetbrains-mono
+gnu-free-fonts
+inter-font
+
+# ---- Web browser ------------------------------------------------------------
+firefox
+firefox-i18n-en-us
+
+# ---- App store + package managers -------------------------------------------
+bauh
+flatpak
+archlinux-appstream-data
+appstream
+appstream-qt
+pamac-aur
+
+# ---- Installer (one-click install to disk) ----------------------------------
+calamares
+calamares-branding-lin
+dosfstools
+mtools
+gparted
+parted
+
+# ---- Archive / media --------------------------------------------------------
+unzip
+zip
+p7zip
+unrar
+tar
+xz
+gzip
+bzip2
+ffmpeg
+gst-plugins-base
+gst-plugins-good
+gst-plugins-bad
+gst-plugins-ugly
+gst-libav
+
+# ---- Power management (idle 0% CPU) -----------------------------------------
+tlp
+acpid
+upower
+fwupd
+
+# ---- Input ------------------------------------------------------------------
+xf86-input-libinput
+xf86-input-synaptics
+xorg-xinput
+
+# ---- Fonts config + font rendering ------------------------------------------
+freetype2
+fontconfig
+harfbuzz
+fribidi
+cairo
+pango
+
+# ---- Misc utilities ---------------------------------------------------------
+git
+curl
+wget
+htop
+btop
+neofetch
+fastfetch
+xdg-utils
+xdg-user-dirs
+shared-mime-info
+desktop-file-utils
+update-desktop-database
+gnome-keyring
+libsecret
+seahorse
+polkit-gnome
+ffmpegthumbs
+gst-plugins-base-libs
+
+# ---- Bootloader -------------------------------------------------------------
+grub
+efibootmgr
+os-prober
+mtools
+
+# ---- Lin OS custom packages (built in this repo) ----------------------------
+# These are installed from the local repo overlay during build:
+#   lin-branding  -> GTK theme + icons + wallpaper + SDDM theme
+#   lin-welcome   -> first-boot welcome app
+#   lin-defaults  -> /etc/skel defaults
+lin-branding
+lin-welcome
+lin-defaults

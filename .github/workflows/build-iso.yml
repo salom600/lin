@@ -1,0 +1,295 @@
+# =============================================================================
+# Lin OS — ISO build workflow
+# =============================================================================
+# Builds the Lin OS live ISO from scratch on every push / tag / manual run.
+#
+# Strategy:
+#   - Run inside an archlinux:latest container (so we have `archiso`, `makepkg`,
+#     and the Arch repos available natively — no need to install them on Ubuntu).
+#   - Build the three local packages (lin-branding / lin-welcome / lin-defaults)
+#     into a local repo at /repo/x86_64.
+#   - Run `mkarchiso` to produce the final .iso file.
+#   - Upload the .iso as a GitHub Actions artifact (retained 14 days).
+#   - On git tags, also create a GitHub Release with the .iso attached.
+#
+# Resource constraints on GitHub Actions free tier:
+#   - 6 hours max per job (we typically use 30-60 minutes)
+#   - 2 CPU cores, 7 GB RAM, 14 GB disk (we use ~10 GB for the build)
+#   - Public repos get unlimited minutes; private repos get 2000 min/month
+# =============================================================================
+name: Build Lin OS ISO
+
+on:
+  push:
+    branches: [ main, master ]
+    tags:     [ 'v*' ]
+    paths-ignore:
+      - '**.md'
+      - 'docs/**'
+      - 'LICENSE'
+  pull_request:
+    branches: [ main, master ]
+  workflow_dispatch:
+    inputs:
+      debug:
+        description: 'Enable SSH debugging (via tmate on failure)'
+        required: false
+        type: boolean
+        default: false
+
+# Cancel superseded runs on the same branch
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Build Lin OS ISO (x86_64)
+    runs-on: ubuntu-latest
+    timeout-minutes: 360   # 6 hour hard cap on free tier
+
+    container:
+      image: archlinux:latest
+      options: --privileged --cap-add=ALL --security-opt seccomp=unconfined
+      env:
+        SRC_ROOT: /__w/lin/lin
+        OUTPUT_DIR: /output
+
+    steps:
+      # ----------------------------------------------------------------------
+      # 1. Checkout
+      # ----------------------------------------------------------------------
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      # ----------------------------------------------------------------------
+      # 2. Initialize Arch in container
+      # ----------------------------------------------------------------------
+      - name: Initialize pacman + keyring
+        run: |
+          echo "==> Initializing pacman keyring"
+          pacman-key --init
+          pacman-key --populate archlinux
+
+          echo "==> Updating system"
+          pacman -Syu --noconfirm
+
+          echo "==> Installing build dependencies"
+          pacman -S --noconfirm --needed \
+            archiso \
+            makepkg \
+            git \
+            wget \
+            curl \
+            rsync \
+            squashfs-tools \
+            imagemagick \
+            librsvg \
+            qt5-svg \
+            inkscape \
+            python \
+            python-pillow \
+            pyalpm \
+            reflector \
+            dosfstools \
+            mtools \
+            edk2-ovmf \
+            openssh \
+            base-devel \
+            sudo
+
+      # ----------------------------------------------------------------------
+      # 3. Refresh mirrorlist (faster build)
+      # ----------------------------------------------------------------------
+      - name: Refresh pacman mirrorlist
+        run: |
+          echo "==> Selecting fastest mirrors"
+          reflector \
+            --country us,gb,de,fr,nl,jp,sg \
+            --protocol https \
+            --latest 20 \
+            --sort rate \
+            --save /etc/pacman.d/mirrorlist || true
+
+      # ----------------------------------------------------------------------
+      # 4. Set up build user (makepkg refuses to run as root)
+      # ----------------------------------------------------------------------
+      - name: Set up build user
+        run: |
+          # Create a non-root user for makepkg
+          if ! id buildbot >/dev/null 2>&1; then
+            useradd -m -G wheel -s /bin/bash buildbot
+            echo "buildbot ALL=(ALL:ALL) NOPASSWD: ALL" > /etc/sudoers.d/buildbot
+            chmod 0440 /etc/sudoers.d/buildbot
+          fi
+
+          # Create directories
+          mkdir -p /repo/x86_64 /output /build
+          chown -R buildbot:buildbot /repo /output /build
+
+          # SRC_ROOT is the repo checkout path
+          chmod -R a+r "${SRC_ROOT}" || true
+
+      # ----------------------------------------------------------------------
+      # 5. Build the three local Lin OS packages
+      # ----------------------------------------------------------------------
+      - name: Build local packages (lin-branding / lin-welcome / lin-defaults)
+        run: |
+          chmod +x scripts/build-lin-packages.sh
+          # Run as buildbot (so makepkg works)
+          sudo -u buildbot \
+            SRC_ROOT="${SRC_ROOT}" \
+            OUTPUT_DIR="${OUTPUT_DIR}" \
+            bash scripts/build-lin-packages.sh
+
+      # ----------------------------------------------------------------------
+      # 6. Add chaotic-aur keyring (so bauh / pamac-aur can install)
+      # ----------------------------------------------------------------------
+      - name: Add chaotic-aur repository
+        run: |
+          echo "==> Adding chaotic-aur repo + keyring"
+          pacman -S --noconfirm --needed chaotic-keyring || true
+          pacman-key --recv-key 3056513887B78AEB --keyserver keyserver.ubuntu.com || true
+          pacman-key --lsign-key 3056513887B78AEB || true
+
+          # Add chaotic-aur to pacman.conf (after multilib)
+          cat >> /etc/pacman.conf <<'EOF'
+
+          [chaotic-aur]
+          Include = /etc/pacman.d/chaotic-mirrorlist
+          EOF
+
+          # Drop the chaotic mirrorlist into place
+          mkdir -p /etc/pacman.d
+          cat > /etc/pacman.d/chaotic-mirrorlist <<'EOF'
+          Server = https://cdn-mirror.chaotic.cx/$repo/$arch
+          Server = https://mirror.f4st.host/chaotic-aur/$repo/$arch
+          EOF
+
+          # Add the local lin-local repo (built in step 5)
+          cat >> /etc/pacman.conf <<'EOF'
+
+          [lin-local]
+          Server = file:///repo/$arch
+          SigLevel = Optional TrustAll
+          EOF
+
+          pacman -Sy
+
+      # ----------------------------------------------------------------------
+      # 7. Sanity-check that all packages in packages.x86_64 are available
+      # ----------------------------------------------------------------------
+      - name: Sanity-check package availability
+        run: |
+          echo "==> Checking that all packages in packages.x86_64 are installable"
+          missing=()
+          while IFS= read -r pkg; do
+            # skip comments and blank lines
+            pkg="$(echo "${pkg}" | sed -e 's/#.*$//' -e 's/[[:space:]]*$//' -e 's/^[[:space:]]*//')"
+            [ -z "${pkg}" ] && continue
+            if ! pacman -Si "${pkg}" >/dev/null 2>&1; then
+              # Allow local packages we built ourselves
+              if ! pacman -Sp "${pkg}" >/dev/null 2>&1; then
+                missing+=("${pkg}")
+              fi
+            fi
+          done < packages.x86_64
+
+          if [ "${#missing[@]}" -gt 0 ]; then
+            echo "ERROR: the following packages are not available in any configured repo:" >&2
+            printf '  - %s\n' "${missing[@]}" >&2
+            exit 1
+          fi
+          echo "All packages available."
+
+      # ----------------------------------------------------------------------
+      # 8. Build the ISO with mkarchiso
+      # ----------------------------------------------------------------------
+      - name: Build ISO with mkarchiso
+        run: |
+          echo "==> Starting mkarchiso build"
+          mkdir -p /work /out
+
+          # mkarchiso needs to be run as root (it uses chroot, mount, etc.)
+          mkarchiso -v -w /work -o /out . 2>&1 | tee /output/archiso-build.log
+
+          echo "==> Build complete. ISO files:"
+          ls -lh /out/
+
+      # ----------------------------------------------------------------------
+      # 9. Compute checksums
+      # ----------------------------------------------------------------------
+      - name: Compute checksums
+        id: checksums
+        run: |
+          cd /out
+          sha256sum *.iso > sha256sum.txt
+          md5sum    *.iso > md5sum.txt
+          echo "## ISO Build Results" > /output/summary.md
+          echo "" >> /output/summary.md
+          echo "| File | Size | SHA256 |" >> /output/summary.md
+          echo "|------|------|--------|" >> /output/summary.md
+          for f in *.iso; do
+            size=$(du -h "${f}" | cut -f1)
+            sha=$(sha256sum "${f}" | cut -d' ' -f1)
+            echo "| ${f} | ${size} | \`${sha}\` |" >> /output/summary.md
+          done
+          cat /output/summary.md
+
+      # ----------------------------------------------------------------------
+      # 10. Upload build logs (always, even on failure)
+      # ----------------------------------------------------------------------
+      - name: Upload build logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: lin-build-logs-${{ github.run_id }}
+          path: |
+            /output/
+          retention-days: 30
+          if-no-files-found: warn
+
+      # ----------------------------------------------------------------------
+      # 11. Upload the ISO as an artifact
+      # ----------------------------------------------------------------------
+      - name: Upload ISO artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: lin-os-iso-${{ github.run_id }}
+          path: |
+            /out/*.iso
+            /out/sha256sum.txt
+            /out/md5sum.txt
+          retention-days: 14
+          if-no-files-found: error
+
+      # ----------------------------------------------------------------------
+      # 12. Create GitHub Release on tags
+      # ----------------------------------------------------------------------
+      - name: Create GitHub Release
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_name }}
+          name: Lin OS ${{ github.ref_name }}
+          body_path: /output/summary.md
+          files: |
+            /out/*.iso
+            /out/sha256sum.txt
+            /out/md5sum.txt
+          draft: false
+          prerelease: ${{ contains(github.ref_name, '-rc') || contains(github.ref_name, '-beta') }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      # ----------------------------------------------------------------------
+      # 13. Optional SSH debugging
+      # ----------------------------------------------------------------------
+      - name: SSH debug session on failure
+        if: failure() && (github.event.inputs.debug == 'true' || false)
+        uses: mxschmitt/action-tmate@v3
+        timeout-minutes: 30
+        with:
+          limit-access-to-actor: true

@@ -1,0 +1,12 @@
+Welcome to Lin OS!
+
+You are on the live ISO. To install Lin OS to your disk, double-click the
+"Install Lin OS" icon on the desktop, or open a terminal and run:
+
+    sudo calamares
+
+Documentation:  https://github.com/salom600/lin/tree/main/docs
+Issues:         https://github.com/salom600/lin/issues
+
+Default live user: lin / lin
+Default root user: root / lin

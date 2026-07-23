@@ -1,0 +1,7 @@
+Lin OS 2026.07 "aurora" (x86_64)
+
+Default login:
+  user:  lin
+  pass:  lin
+
+To install, run:  sudo calamares

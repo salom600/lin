@@ -1,0 +1,13 @@
+[Desktop Entry]
+Type=Application
+Name=Install Lin OS
+GenericName=System Installer
+Comment=Install Lin OS to your hard drive (one-click, no commands needed)
+Comment[ar]=تثبيت Lin OS على القرص الصلب بنقرة واحدة
+Exec=sudo -E calamares
+Icon=lin-installer
+Terminal=false
+Categories=System;Settings;PackageManager;
+Keywords=install;calamares;setup;
+StartupNotify=true
+StartupWMClass=calamares

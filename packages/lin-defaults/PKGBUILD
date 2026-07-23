@@ -1,0 +1,54 @@
+# Maintainer: Lin OS Project <https://github.com/salom600/lin>
+# -----------------------------------------------------------------------------
+# lin-defaults
+# -------------
+# Provides the Lin OS user-environment defaults (shipped to /etc/skel so
+# every new user gets them): Hyprland, waybar, wofi, kitty, GTK theme, etc.
+#
+# The config files themselves are the same ones committed in this repo at
+# airootfs/etc/skel/.config/. We ship them in this package so the installed
+# system (post-Calamares) also gets them via `cp -aT /etc/skel/. /home/USER/`.
+# -----------------------------------------------------------------------------
+
+pkgname=lin-defaults
+pkgver=2026.07
+pkgrel=1
+pkgdesc="Lin OS user-environment defaults — Hyprland, waybar, wofi, kitty configs"
+arch=('any')
+url="https://github.com/salom600/lin"
+license=('GPL3')
+depends=('hyprland' 'waybar' 'wofi' 'kitty' 'dunst' 'hyprpaper' 'hypridle' 'hyprlock'
+         'xdg-desktop-portal-hyprland' 'polkit-kde-agent' 'qt5ct' 'qt6ct' 'kvantum')
+source=()
+sha256sums=()
+
+package() {
+    install -d "${pkgdir}/etc/skel/.config/hypr"
+    install -d "${pkgdir}/etc/skel/.config/waybar"
+    install -d "${pkgdir}/etc/skel/.config/wofi"
+    install -d "${pkgdir}/etc/skel/.config/kitty"
+    install -d "${pkgdir}/etc/skel/.config/hypridle"
+    install -d "${pkgdir}/etc/skel/.config/gtk-3.0"
+    install -d "${pkgdir}/etc/skel/.config/gtk-4.0"
+    install -d "${pkgdir}/etc/skel/.config/qt5ct"
+    install -d "${pkgdir}/etc/skel/.config/Fontconfig"
+    install -d "${pkgdir}/etc/skel/.config/bauh"
+    install -d "${pkgdir}/etc/skel/.local/share/applications"
+    install -d "${pkgdir}/etc/skel/.local/bin"
+    install -d "${pkgdir}/etc/skel/Desktop"
+
+    # Symlinks are NOT used — we ship real files so users can edit freely.
+    # These files are populated by the build script (scripts/populate-lin-defaults.sh)
+    # before makepkg is called.
+
+    # If populate-lin-defaults.sh has copied the files into ${srcdir}/skel/,
+    # copy them into the package now.
+    if [ -d "${srcdir}/skel" ]; then
+        cp -aT "${srcdir}/skel/." "${pkgdir}/etc/skel/"
+    fi
+
+    # LICENSE
+    install -Dm644 /dev/stdin "${pkgdir}/usr/share/licenses/${pkgname}/LICENSE" <<'LIC'
+Lin OS defaults are licensed under GPL-3.0-or-later.
+LIC
+}

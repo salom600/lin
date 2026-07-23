@@ -1,0 +1,6 @@
+# Chaotic-AUR mirror list — fetched from the official source.
+# On first boot, /etc/lin/install-store.sh refreshes this file.
+
+Server = https://cdn-mirror.chaotic.cx/$repo/$arch
+Server = https://mirror.f4st.host/chaotic-aur/$repo/$arch
+Server = https://builds.garudalinux.org/repos/chaotic-aur/$repo/$arch
