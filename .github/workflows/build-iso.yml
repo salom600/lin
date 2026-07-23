@@ -73,6 +73,18 @@ jobs:
           pacman-key --init
           pacman-key --populate archlinux
 
+          # Enable [multilib] in the container's pacman.conf (commented out
+          # by default in the archlinux:latest Docker image). This is needed
+          # for lib32-mesa, lib32-vulkan-*, and other 32-bit gaming packages.
+          # Use &-safe escaping: the replacement text [multilib] needs \[ to
+          # avoid sed interpreting [ as a regex metacharacter.
+          sed -i 's|^#\s*\[multilib\]|\[multilib\]|' /etc/pacman.conf
+          # Make sure the Include line under [multilib] is uncommented too
+          sed -i '/^\[multilib\]/{n;s/^#\s*Include/Include/}' /etc/pacman.conf
+
+          echo "==> Verifying [multilib] is enabled:"
+          grep -A1 '^\[multilib\]' /etc/pacman.conf || true
+
           echo "==> Updating system"
           pacman -Syu --noconfirm
 
@@ -199,23 +211,43 @@ jobs:
       # ----------------------------------------------------------------------
       - name: Sanity-check package availability
         run: |
+          echo "==> Refreshing pacman databases before sanity check"
+          pacman -Sy
+
+          echo "==> Enabled repos:"
+          grep -E '^\[' /etc/pacman.conf | sed 's/^/    /'
+
           echo "==> Checking that all packages in packages.x86_64 are installable"
           missing=()
           while IFS= read -r pkg; do
             # skip comments and blank lines
             pkg="$(echo "${pkg}" | sed -e 's/#.*$//' -e 's/[[:space:]]*$//' -e 's/^[[:space:]]*//')"
             [ -z "${pkg}" ] && continue
-            if ! pacman -Si "${pkg}" >/dev/null 2>&1; then
-              # Allow local packages we built ourselves
-              if ! pacman -Sp "${pkg}" >/dev/null 2>&1; then
+
+            # Check if the package is available in any enabled repo.
+            # We capture stderr so we can print a diagnostic on failure.
+            si_err=$(pacman -Si "${pkg}" 2>&1 >/dev/null)
+            si_rc=$?
+            if [ ${si_rc} -ne 0 ]; then
+              # Fall back to -Sp (prints the URL, works for local file:// repos)
+              sp_err=$(pacman -Sp "${pkg}" 2>&1 >/dev/null)
+              sp_rc=$?
+              if [ ${sp_rc} -ne 0 ]; then
                 missing+=("${pkg}")
+                echo "  MISSING: ${pkg}" >&2
+                echo "    pacman -Si error: ${si_err}" >&2
+                echo "    pacman -Sp error: ${sp_err}" >&2
               fi
             fi
           done < packages.x86_64
 
           if [ "${#missing[@]}" -gt 0 ]; then
-            echo "ERROR: the following packages are not available in any configured repo:" >&2
+            echo "" >&2
+            echo "ERROR: ${#missing[@]} package(s) not available in any configured repo:" >&2
             printf '  - %s\n' "${missing[@]}" >&2
+            echo "" >&2
+            echo "Configured repos:" >&2
+            grep -E '^\[' /etc/pacman.conf | sed 's/^/    /' >&2
             exit 1
           fi
           echo "All packages available."

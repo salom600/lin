@@ -74,6 +74,8 @@ libva-intel-driver
 # Hyprland is a Wayland compositor with built-in blur, rounded corners,
 # animations and transparency — exactly the "modern, sleek, transparent"
 # look the brief asks for, and it idles at ~250-350 MB with the full stack.
+# NOTE: Hyprland 0.40+ ships its own wlroots fork, so 'wlroots' is NOT needed
+# (and was removed from the repos anyway).
 hyprland
 hyprcursor
 hypridle
@@ -88,7 +90,6 @@ xorg-xwayland
 wayland
 wayland-protocols
 wayland-utils
-wlroots
 polkit-kde-agent
 qt6ct
 qt5ct
@@ -115,28 +116,29 @@ micro
 gedit
 
 # ---- GTK / Qt theming -------------------------------------------------------
+# NOTE: gtk-engines and gtk-engine-murrine are old GTK2 theming engines that
+# were removed from the official repos (now AUR-only). Modern GTK3/4 themes
+# don't need them. kvantum-vertex is also AUR-only; 'kvantum' provides the
+# engine itself.
 gtk3
 gtk4
-gtk-engines
-gtk-engine-murrine
 gnome-themes-extra
 qt5-base
 qt6-base
 kvantum
-kvantum-vertex
 
 # ---- Icon themes (Windows 11-like) ------------------------------------------
 papirus-icon-theme
-adwaita-icon-themes
+adwaita-icon-theme
 hicolor-icon-theme
 
 # ---- Fonts ------------------------------------------------------------------
+# NOTE: noto-fonts-compat was merged into noto-fonts years ago.
 ttf-dejavu
 ttf-liberation
 noto-fonts
 noto-fonts-cjk
 noto-fonts-emoji
-noto-fonts-compat
 ttf-roboto
 ttf-roboto-mono
 ttf-fira-sans
@@ -150,12 +152,15 @@ firefox
 firefox-i18n-en-us
 
 # ---- App store + package managers -------------------------------------------
+# bauh handles pacman + AUR + Flatpak + AppImage — that's enough for the app
+# store. pamac-aur was removed from this list because it's been flaky in
+# chaotic-aur (licensing issues with AppStream data); bauh covers the same
+# ground.
 bauh
 flatpak
 archlinux-appstream-data
 appstream
 appstream-qt
-pamac-aur
 
 # ---- Installer (one-click install to disk) ----------------------------------
 # (Calamares branding is shipped via the airootfs overlay at
@@ -202,18 +207,19 @@ cairo
 pango
 
 # ---- Misc utilities ---------------------------------------------------------
+# NOTE: 'update-desktop-database' is a COMMAND provided by desktop-file-utils,
+# not a package. It's already provided by desktop-file-utils above.
+# NOTE: neofetch is deprecated — fastfetch is the maintained successor.
 git
 curl
 wget
 htop
 btop
-neofetch
 fastfetch
 xdg-utils
 xdg-user-dirs
 shared-mime-info
 desktop-file-utils
-update-desktop-database
 gnome-keyring
 libsecret
 seahorse
