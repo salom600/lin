@@ -73,17 +73,25 @@ jobs:
           pacman-key --init
           pacman-key --populate archlinux
 
-          # Enable [multilib] in the container's pacman.conf (commented out
-          # by default in the archlinux:latest Docker image). This is needed
-          # for lib32-mesa, lib32-vulkan-*, and other 32-bit gaming packages.
-          # Use &-safe escaping: the replacement text [multilib] needs \[ to
-          # avoid sed interpreting [ as a regex metacharacter.
-          sed -i 's|^#\s*\[multilib\]|\[multilib\]|' /etc/pacman.conf
-          # Make sure the Include line under [multilib] is uncommented too
-          sed -i '/^\[multilib\]/{n;s/^#\s*Include/Include/}' /etc/pacman.conf
+          # Enable [multilib] in the container's pacman.conf.
+          # The archlinux:latest Docker image may or may not have a
+          # [multilib] section (it varies between image versions), so the
+          # safest approach is:
+          #   1. Remove any existing [multilib] section (active or commented).
+          #   2. Append a fresh [multilib] section at the end.
+          # This is needed for lib32-mesa, lib32-vulkan-*, etc.
+          echo "==> Enabling [multilib]"
+          # Delete any line matching [multilib] (commented or not) and the
+          # line immediately after it (the Include line).
+          sed -i '/multilib/d' /etc/pacman.conf
+          # Append a clean [multilib] section
+          printf '\n[multilib]\nInclude = /etc/pacman.d/mirrorlist\n' >> /etc/pacman.conf
 
           echo "==> Verifying [multilib] is enabled:"
-          grep -A1 '^\[multilib\]' /etc/pacman.conf || true
+          grep -A1 '^\[multilib\]' /etc/pacman.conf || {
+            echo "ERROR: failed to enable [multilib]" >&2
+            exit 1
+          }
 
           echo "==> Updating system"
           pacman -Syu --noconfirm
@@ -211,6 +219,12 @@ jobs:
       # ----------------------------------------------------------------------
       - name: Sanity-check package availability
         run: |
+          # Disable set -e for this step — we want to collect ALL missing
+          # packages before exiting, not die on the first one. GitHub Actions
+          # runs run: blocks with `bash -e` by default, which would kill the
+          # script as soon as the first `pacman -Si` returned non-zero.
+          set +e
+
           echo "==> Refreshing pacman databases before sanity check"
           pacman -Sy
 
@@ -219,27 +233,30 @@ jobs:
 
           echo "==> Checking that all packages in packages.x86_64 are installable"
           missing=()
+          checked=0
           while IFS= read -r pkg; do
             # skip comments and blank lines
             pkg="$(echo "${pkg}" | sed -e 's/#.*$//' -e 's/[[:space:]]*$//' -e 's/^[[:space:]]*//')"
             [ -z "${pkg}" ] && continue
+            checked=$((checked + 1))
 
             # Check if the package is available in any enabled repo.
-            # We capture stderr so we can print a diagnostic on failure.
-            si_err=$(pacman -Si "${pkg}" 2>&1 >/dev/null)
+            # `pacman -Si` queries installable packages from sync repos;
+            # `pacman -Sl` queries local repos (for our file:// lin-local).
+            # We use both because -Si doesn't always see file:// repos.
+            si_out=$(pacman -Si "${pkg}" 2>&1)
             si_rc=$?
-            if [ ${si_rc} -ne 0 ]; then
-              # Fall back to -Sp (prints the URL, works for local file:// repos)
-              sp_err=$(pacman -Sp "${pkg}" 2>&1 >/dev/null)
-              sp_rc=$?
-              if [ ${sp_rc} -ne 0 ]; then
-                missing+=("${pkg}")
-                echo "  MISSING: ${pkg}" >&2
-                echo "    pacman -Si error: ${si_err}" >&2
-                echo "    pacman -Sp error: ${sp_err}" >&2
-              fi
+            sl_out=$(pacman -Sl lin-local 2>/dev/null | grep -E "^[^ ]+ ${pkg} ")
+            sl_rc=$?
+
+            if [ ${si_rc} -ne 0 ] && [ -z "${sl_out}" ]; then
+              missing+=("${pkg}")
+              echo "  MISSING: ${pkg}" >&2
+              echo "    pacman -Si error: $(echo "${si_out}" | head -1)" >&2
             fi
           done < packages.x86_64
+
+          echo "==> Checked ${checked} packages, ${#missing[@]} missing."
 
           if [ "${#missing[@]}" -gt 0 ]; then
             echo "" >&2
@@ -250,7 +267,7 @@ jobs:
             grep -E '^\[' /etc/pacman.conf | sed 's/^/    /' >&2
             exit 1
           fi
-          echo "All packages available."
+          echo "All ${checked} packages available."
 
       # ----------------------------------------------------------------------
       # 8. Build the ISO with mkarchiso
