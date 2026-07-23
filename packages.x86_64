@@ -67,7 +67,8 @@ lib32-vulkan-radeon
 lib32-vulkan-intel
 lib32-vulkan-mesa-layers
 intel-media-driver
-libva-mesa-driver
+libva
+libva-utils
 libva-intel-driver
 
 # ---- Hyprland desktop stack -------------------------------------------------
@@ -174,7 +175,7 @@ parted
 # ---- Archive / media --------------------------------------------------------
 unzip
 zip
-p7zip
+7zip
 unrar
 tar
 xz

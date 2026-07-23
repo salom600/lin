@@ -122,7 +122,25 @@ jobs:
             edk2-ovmf \
             openssh \
             base-devel \
-            sudo
+            sudo \
+            cmake \
+            extra-cmake-modules \
+            boost \
+            yaml-cpp \
+            kpmcore \
+            polkit-qt5-1 \
+            qt5-tools \
+            kcrash \
+            ckbcomp \
+            hwinfo \
+            appstream-qt \
+            python-yaml \
+            kconfig \
+            kcoreaddons \
+            kiconthemes \
+            ki18n \
+            kio \
+            solid
 
           # Refresh the font cache so ImageMagick can find ttf-dejavu immediately
           fc-cache -f
@@ -170,6 +188,20 @@ jobs:
             SRC_ROOT="${SRC_ROOT}" \
             OUTPUT_DIR="${OUTPUT_DIR}" \
             bash scripts/build-lin-packages.sh
+
+      # ----------------------------------------------------------------------
+      # 5b. Build calamares from AUR (fallback if not in repos)
+      # ----------------------------------------------------------------------
+      # Calamares is the system installer. In some repo states it's not in
+      # [extra] or [chaotic-aur]. This step checks and builds from AUR if needed.
+      # The build takes ~15-20 min on 2 cores.
+      - name: Build calamares from AUR (if not in repos)
+        run: |
+          chmod +x scripts/build-calamares-from-aur.sh
+          # Run as buildbot (makepkg refuses root)
+          sudo -u buildbot \
+            OUTPUT_DIR="${OUTPUT_DIR}" \
+            bash scripts/build-calamares-from-aur.sh
 
       # ----------------------------------------------------------------------
       # 6. Add chaotic-aur repo + keyring (needed for bauh / pamac-aur)
@@ -253,6 +285,13 @@ jobs:
               missing+=("${pkg}")
               echo "  MISSING: ${pkg}" >&2
               echo "    pacman -Si error: $(echo "${si_out}" | head -1)" >&2
+              # Search for similar package names (helps diagnose renames)
+              local search
+              search=$(pacman -Ss "^${pkg}" 2>/dev/null | head -5)
+              if [ -n "${search}" ]; then
+                echo "    similar packages found:" >&2
+                echo "${search}" | sed 's/^/      /' >&2
+              fi
             fi
           done < packages.x86_64
 
