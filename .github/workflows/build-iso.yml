@@ -79,6 +79,8 @@ jobs:
           echo "==> Installing build dependencies"
           # NOTE: makepkg is NOT a separate package — it ships with pacman.
           # base-devel is a package group (provides gcc, fakeroot, etc. for makepkg).
+          # ttf-dejavu is needed by lin-branding's wallpaper generation (ImageMagick
+          # uses it to draw the "Lin OS" / "aurora" text on the gradient).
           pacman -S --noconfirm --needed \
             archiso \
             git \
@@ -89,6 +91,8 @@ jobs:
             imagemagick \
             librsvg \
             qt5-svg \
+            ttf-dejavu \
+            fontconfig \
             python \
             python-pillow \
             pyalpm \
@@ -99,6 +103,9 @@ jobs:
             openssh \
             base-devel \
             sudo
+
+          # Refresh the font cache so ImageMagick can find ttf-dejavu immediately
+          fc-cache -f
 
       # ----------------------------------------------------------------------
       # 3. Refresh mirrorlist (faster build)

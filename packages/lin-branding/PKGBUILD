@@ -18,36 +18,60 @@ arch=('any')
 url="https://github.com/salom600/lin"
 license=('GPL3')
 depends=('gtk3' 'gtk4' 'sddm' 'papirus-icon-theme')
-makedepends=('imagemagick' 'librsvg' 'qt5-svg')
+makedepends=('imagemagick' 'librsvg' 'qt5-svg' 'ttf-dejavu')
 source=()
 sha256sums=()
 
 package() {
     # ---- Wallpapers ---------------------------------------------------------
     install -d "${pkgdir}/usr/share/backgrounds/lin"
-    # Generate a 1920x1080 gradient wallpaper using ImageMagick at build time
-    # (no external assets needed — the wallpaper is generated procedurally)
-    convert -size 1920x1080 \
-        gradient:'#1a1d29'-'#6366f1' \
-        -gravity center \
-        -font DejaVu-Sans -pointsize 84 -fill 'rgba(255,255,255,0.85)' \
-        -annotate +0-50 'Lin OS' \
-        -font DejaVu-Sans -pointsize 28 -fill 'rgba(255,255,255,0.55)' \
-        -annotate +0+50 'aurora' \
-        "${pkgdir}/usr/share/backgrounds/lin/lin-default.png"
 
-    # Generate the aurora variant (more purple, with a wave)
-    convert -size 1920x1080 \
-        gradient:'#2d1b3d'-'#8b5cf6' \
-        -gravity center \
-        -font DejaVu-Sans -pointsize 84 -fill 'rgba(255,255,255,0.85)' \
-        -annotate +0-50 'Lin OS' \
-        -font DejaVu-Sans -pointsize 28 -fill 'rgba(255,255,255,0.55)' \
-        -annotate +0+50 'aurora' \
-        "${pkgdir}/usr/share/backgrounds/lin/lin-aurora.png"
+    # Locate the DejaVu Sans Bold font file (preferred over name-based
+    # lookup because ImageMagick's Freetype+fontconfig integration is
+    # historically flaky about resolving font names inside build containers).
+    local bold_font=""
+    for candidate in \
+        /usr/share/fonts/TTF/DejaVuSans-Bold.ttf \
+        /usr/share/fonts/dejavu/DejaVuSans-Bold.ttf \
+        /usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf; do
+        if [ -f "${candidate}" ]; then
+            bold_font="${candidate}"
+            break
+        fi
+    done
 
-    # GRUB background (smaller, darker)
-    convert -size 640x480 gradient:'#1a1d29'-'#2d1b3d' \
+    # Helper: generate a wallpaper with optional text overlay.
+    # If the font file is missing, fall back to a plain gradient (the build
+    # should never fail just because of wallpaper aesthetics).
+    make_wallpaper() {
+        local out="$1" w="$2" h="$3" grad_from="$4" grad_to="$5"
+        if [ -n "${bold_font}" ]; then
+            magick -size "${w}x${h}" \
+                gradient:"${grad_from}"-"${grad_to}" \
+                -gravity center \
+                -font "${bold_font}" -pointsize $(( w / 23 )) -fill 'rgba(255,255,255,0.85)' \
+                -annotate +0-$(( h / 22 )) 'Lin OS' \
+                -font "${bold_font}" -pointsize $(( w / 68 )) -fill 'rgba(255,255,255,0.55)' \
+                -annotate +0+$(( h / 22 )) 'aurora' \
+                "${out}"
+        else
+            echo "  WARNING: DejaVu Sans Bold not found — generating text-less wallpaper" >&2
+            magick -size "${w}x${h}" \
+                gradient:"${grad_from}"-"${grad_to}" \
+                "${out}"
+        fi
+    }
+
+    # Generate the default wallpaper (1920x1080, indigo gradient)
+    make_wallpaper "${pkgdir}/usr/share/backgrounds/lin/lin-default.png" \
+        1920 1080 '#1a1d29' '#6366f1'
+
+    # Generate the aurora variant (1920x1080, violet gradient)
+    make_wallpaper "${pkgdir}/usr/share/backgrounds/lin/lin-aurora.png" \
+        1920 1080 '#2d1b3d' '#8b5cf6'
+
+    # GRUB background (640x480, dark gradient — no text, kept tiny)
+    magick -size 640x480 gradient:'#1a1d29'-'#2d1b3d' \
         "${pkgdir}/usr/share/backgrounds/lin/lin-grub.png"
 
     # ---- GTK theme "Lin-Dark" ----------------------------------------------
@@ -376,16 +400,22 @@ SVG
 SVG
 
     # ---- Mimetypes / pixmaps for .desktop files ---------------------------
+    # Generate PNG versions in multiple sizes for each icon.
+    # Primary: rsvg-convert (librsvg). Fallback: magick (ImageMagick).
+    # If both fail, skip — the SVG alone is enough for most modern DEs.
     for icon in lin-store lin-installer lin-welcome lin-update; do
-        # Generate PNG versions in multiple sizes
         for size in 16 22 32 48 64 128 256; do
-            install -d "${pkgdir}/usr/share/icons/hicolor/${size}x${size}/apps"
-            rsvg-convert -w $size -h $size \
-                "${pkgdir}/usr/share/icons/hicolor/scalable/apps/${icon}.svg" \
-                "${pkgdir}/usr/share/icons/hicolor/${size}x${size}/apps/${icon}.png" 2>/dev/null || \
-            convert -background none -resize ${size}x${size} \
-                "${pkgdir}/usr/share/icons/hicolor/scalable/apps/${icon}.svg" \
-                "${pkgdir}/usr/share/icons/hicolor/${size}x${size}/apps/${icon}.png" 2>/dev/null || true
+            local outdir="${pkgdir}/usr/share/icons/hicolor/${size}x${size}/apps"
+            install -d "${outdir}"
+            local outpng="${outdir}/${icon}.png"
+            local svg="${pkgdir}/usr/share/icons/hicolor/scalable/apps/${icon}.svg"
+            if rsvg-convert -w $size -h $size "${svg}" "${outpng}" 2>/dev/null; then
+                :
+            elif magick -background none -resize ${size}x${size} "${svg}" "${outpng}" 2>/dev/null; then
+                :
+            else
+                echo "  WARNING: could not render ${icon}.png at ${size}px (skipping)" >&2
+            fi
         done
     done
 
