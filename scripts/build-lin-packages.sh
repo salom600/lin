@@ -40,21 +40,42 @@ build_pkg() {
     cp -a "${pkgsrc}" "${workdir}/"
     cd "${workdir}/${pkgname}"
 
-    # For lin-defaults: copy airootfs/etc/skel into $srcdir/skel so the
-    # PKGBUILD's package() function can pick it up.
+    # For lin-defaults: copy airootfs/etc/skel into the PKGBUILD's startdir
+    # (NOT into src/, because `makepkg -f` wipes src/ before building).
+    # The PKGBUILD references this as ${startdir}/skel in package().
     if [ "${pkgname}" = "lin-defaults" ]; then
-        mkdir -p src/skel
-        cp -aT "${SRC_ROOT}/airootfs/etc/skel" "src/skel"
+        rm -rf skel
+        cp -aT "${SRC_ROOT}/airootfs/etc/skel" "skel"
     fi
 
-    # Build as nobody (makepkg refuses to run as root)
-    chown -R nobody:nobody "${workdir}"
-    sudo -u nobody makepkg -sf --noconfirm --skippgpcheck \
-        --config /etc/makepkg.conf 2>&1 | tee "${OUTPUT_DIR}/${pkgname}-build.log"
+    # makepkg refuses to run as root. The CI workflow already invokes this
+    # script as user 'buildbot' (non-root), so we can call makepkg directly.
+    # (No chown / sudo -u dance needed — that pattern only applies when the
+    #  script itself runs as root and needs to drop privileges.)
+    #
+    # Temporarily disable `set -e` around the pipeline so we can capture
+    # makepkg's exit code via PIPESTATUS (tee always succeeds, so without
+    # this we'd lose makepkg's failure code under pipefail).
+    set +e
+    makepkg -sf --noconfirm --skippgpcheck \
+        2>&1 | tee "${OUTPUT_DIR}/${pkgname}-build.log"
+    local makepkg_rc="${PIPESTATUS[0]}"
+    set -e
 
-    # Move the built package into the local repo
-    local built
-    built=$(ls "${pkgname}"-*.pkg.tar.zst 2>/dev/null | head -n1)
+    if [ "${makepkg_rc}" -ne 0 ]; then
+        echo "ERROR: makepkg failed for ${pkgname} (exit ${makepkg_rc})" >&2
+        echo "       See ${OUTPUT_DIR}/${pkgname}-build.log for full output." >&2
+        exit 1
+    fi
+
+    # Find the built package (glob-safe: if no match, the loop body doesn't run)
+    local built=""
+    local f
+    for f in "${pkgname}"-*.pkg.tar.zst; do
+        [ -f "$f" ] || continue
+        built="$f"
+        break
+    done
     if [ -z "${built}" ]; then
         echo "ERROR: ${pkgname} build produced no .pkg.tar.zst" >&2
         exit 1

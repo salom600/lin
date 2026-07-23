@@ -37,14 +37,12 @@ package() {
     install -d "${pkgdir}/etc/skel/.local/bin"
     install -d "${pkgdir}/etc/skel/Desktop"
 
-    # Symlinks are NOT used — we ship real files so users can edit freely.
-    # These files are populated by the build script (scripts/populate-lin-defaults.sh)
-    # before makepkg is called.
-
-    # If populate-lin-defaults.sh has copied the files into ${srcdir}/skel/,
-    # copy them into the package now.
-    if [ -d "${srcdir}/skel" ]; then
-        cp -aT "${srcdir}/skel/." "${pkgdir}/etc/skel/"
+    # The skel/ directory is copied alongside the PKGBUILD by
+    # scripts/build-lin-packages.sh (NOT into ${srcdir}, because `makepkg -f`
+    # wipes ${srcdir} before building). ${startdir} is the directory containing
+    # this PKGBUILD and is never wiped by makepkg.
+    if [ -d "${startdir}/skel" ]; then
+        cp -aT "${startdir}/skel/." "${pkgdir}/etc/skel/"
     fi
 
     # LICENSE
